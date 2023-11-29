@@ -8,6 +8,7 @@
 
 extern "C"
 {
+#include <dvp.h>
 #include <fpioa.h>
 #include <gpiohs.h>
 #include <plic.h>
@@ -63,7 +64,14 @@ private:
         gpiohs_set_drive_mode(LCD_BLIGHT_IO, GPIO_DM_OUTPUT);
         gpiohs_set_pin(LCD_BLIGHT_IO, GPIO_PV_LOW);
 
-        // TODO.
+        // DVP.
+        fpioa_set_function(DVP_PWDN_PIN, FUNC_CMOS_PWDN);
+        fpioa_set_function(DVP_XCLK_PIN, FUNC_CMOS_XCLK);
+        fpioa_set_function(DVP_VSYNC_PIN, FUNC_CMOS_VSYNC);
+        fpioa_set_function(DVP_HREF_PIN, FUNC_CMOS_HREF);
+        fpioa_set_function(DVP_PCLK_PIN, FUNC_CMOS_PCLK);
+        fpioa_set_function(DVP_SCCB_SCLK_PIN, FUNC_SCCB_SCLK);
+        fpioa_set_function(DVP_SCCB_SDA_PIN, FUNC_SCCB_SDA);
     }
     void initialize_clock() {
         sysctl_pll_set_freq(SYSCTL_PLL0, 800000000UL);
