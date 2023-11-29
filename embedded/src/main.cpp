@@ -15,6 +15,7 @@ extern "C"
 #include <sysctl.h>
 
 #include "drivers/board_config.h"
+#include "drivers/gc0328.h"
 #include "drivers/lcd.h"
 }
 
