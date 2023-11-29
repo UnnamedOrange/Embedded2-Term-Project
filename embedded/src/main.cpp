@@ -4,8 +4,13 @@
 
 extern "C"
 {
+#include <fpioa.h>
+#include <gpiohs.h>
 #include <plic.h>
 #include <sysctl.h>
+
+#include "drivers/board_config.h"
+#include "drivers/lcd.h"
 }
 
 class Main {
@@ -27,6 +32,11 @@ private:
         sysctl_set_power_mode(SYSCTL_POWER_BANK7, SYSCTL_POWER_V18);
     }
     void initialize_io() {
+        // LCD backlight.
+        fpioa_set_function(LCD_BLIGHT_PIN, fpioa_function_t(int(FUNC_GPIOHS0) + LCD_BLIGHT_IO));
+        gpiohs_set_drive_mode(LCD_BLIGHT_IO, GPIO_DM_OUTPUT);
+        gpiohs_set_pin(LCD_BLIGHT_IO, GPIO_PV_LOW);
+
         // TODO.
     }
     void initialize_clock() {
