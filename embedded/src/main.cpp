@@ -1,6 +1,10 @@
+#include <array>
+#include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <iostream>
 #include <memory>
+#include <thread>
 
 extern "C"
 {
@@ -13,7 +17,16 @@ extern "C"
 #include "drivers/lcd.h"
 }
 
+using namespace std::literals;
+
 class Main {
+public:
+    static constexpr auto LCD_WIDTH = 320;
+    static constexpr auto LCD_HEIGHT = 240;
+
+private:
+    std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> g_lcd_gram{};
+
 public:
     Main() {
         initialize();
@@ -39,6 +52,12 @@ private:
         fpioa_set_function(LCD_RST_PIN, fpioa_function_t(int(FUNC_GPIOHS0) + LCD_RST_IO));
         sysctl_set_spi0_dvp_data(1);
 
+        // LCD initialization.
+        lcd_init();
+        lcd_set_direction(DIR_YX_RLDU);
+        bitblt();
+        std::this_thread::sleep_for(32ms);
+
         // LCD backlight.
         fpioa_set_function(LCD_BLIGHT_PIN, fpioa_function_t(int(FUNC_GPIOHS0) + LCD_BLIGHT_IO));
         gpiohs_set_drive_mode(LCD_BLIGHT_IO, GPIO_DM_OUTPUT);
@@ -54,6 +73,9 @@ private:
     void initialize_irq() {
         plic_init();
         // TODO.
+    }
+    void bitblt() {
+        lcd_draw_picture(0, 0, LCD_WIDTH, LCD_HEIGHT, reinterpret_cast<uint32_t*>(g_lcd_gram.data()));
     }
 };
 
