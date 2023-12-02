@@ -27,6 +27,8 @@ class Main {
 public:
     static constexpr auto LCD_WIDTH = 320;
     static constexpr auto LCD_HEIGHT = 240;
+    static constexpr auto CAMERA_WIDTH = 320;
+    static constexpr auto CAMERA_HEIGHT = 240;
 
 private:
     static int irq_dvp(void* ctx) {
@@ -45,9 +47,9 @@ private:
     }
 
 private:
-    std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> g_lcd_gram{};
-    std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> g_dvp_565{};
-    std::array<std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT>, 3> g_dvp_888_planar{};
+    std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> lcd_gram{};
+    std::array<uint16_t, CAMERA_WIDTH * CAMERA_HEIGHT> dvp_565{};
+    std::array<std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>, 3> dvp_888_planar{};
 
     volatile bool has_dvp_finished = true;
 
@@ -109,12 +111,12 @@ private:
         dvp_set_output_enable(DVP_OUTPUT_AI, 1);
         dvp_set_output_enable(DVP_OUTPUT_DISPLAY, 1);
         dvp_set_image_format(DVP_CFG_RGB_FORMAT);
-        dvp_set_image_size(320, 240);
+        dvp_set_image_size(CAMERA_WIDTH, CAMERA_HEIGHT);
 
-        dvp_set_display_addr(reinterpret_cast<uintptr_t>(g_dvp_565.data()));
-        dvp_set_ai_addr(reinterpret_cast<uintptr_t>(g_dvp_888_planar[0].data()),
-                        reinterpret_cast<uintptr_t>(g_dvp_888_planar[1].data()),
-                        reinterpret_cast<uintptr_t>(g_dvp_888_planar[2].data()));
+        dvp_set_display_addr(reinterpret_cast<uintptr_t>(dvp_565.data()));
+        dvp_set_ai_addr(reinterpret_cast<uintptr_t>(dvp_888_planar[0].data()),
+                        reinterpret_cast<uintptr_t>(dvp_888_planar[1].data()),
+                        reinterpret_cast<uintptr_t>(dvp_888_planar[2].data()));
 
         gc0328_init();
     }
@@ -131,7 +133,7 @@ private:
         sysctl_enable_irq();
     }
     void bitblt() {
-        lcd_draw_picture(0, 0, LCD_WIDTH, LCD_HEIGHT, reinterpret_cast<uint32_t*>(g_lcd_gram.data()));
+        lcd_draw_picture(0, 0, LCD_WIDTH, LCD_HEIGHT, reinterpret_cast<uint32_t*>(lcd_gram.data()));
     }
     void capture_blocking(int camera_id) {
         if (camera_id == 0) {
