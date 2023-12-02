@@ -106,7 +106,7 @@ private:
     }
     void initialize_dvp() {
         dvp_init(8);
-        dvp_set_xclk_rate(24000000);
+        dvp_set_xclk_rate(64000000);
         dvp_enable_burst();
         dvp_set_output_enable(DVP_OUTPUT_AI, 1);
         dvp_set_output_enable(DVP_OUTPUT_DISPLAY, 1);
