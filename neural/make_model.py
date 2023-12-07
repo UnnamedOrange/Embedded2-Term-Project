@@ -1,8 +1,38 @@
 import numpy as np
-import keras
 
 
-def make_model(n_layer: int = 100) -> keras.Model:
+def make_model(n_layer: int = 100):
+    import tensorflow as tf
+
+    kernel = np.array([[1.0, 2.0, 1.0], [2.0, 4.0, 2.0], [1.0, 2.0, 1.0]])
+    kernel = kernel / np.sum(kernel)
+    weights = np.zeros((3, 3, 3, 3))
+    for i in range(3):
+        weights[:, :, i, i] = kernel
+
+    model = tf.keras.Sequential(
+        [
+            tf.keras.layers.Conv2D(
+                filters=3,
+                kernel_size=3,
+                strides=1,
+                padding="same",
+                use_bias=False,
+                input_shape=(None, None, 3),
+            )
+            for _ in range(n_layer)
+        ]
+    )
+    for i in range(n_layer):
+        model.layers[i].set_weights([weights])
+        model.layers[i].trainable = False
+
+    return model
+
+
+def make_model_3(n_layer: int = 100):
+    import keras
+
     kernel = np.array([[1.0, 2.0, 1.0], [2.0, 4.0, 2.0], [1.0, 2.0, 1.0]])
     kernel = kernel / np.sum(kernel)
     weights = np.zeros((3, 3, 3, 3))
