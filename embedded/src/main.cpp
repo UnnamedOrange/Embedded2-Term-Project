@@ -11,12 +11,19 @@ extern "C"
 #include <dvp.h>
 #include <fpioa.h>
 #include <gpiohs.h>
+#include <kpu.h>
 #include <plic.h>
 #include <sysctl.h>
 
 #include "drivers/board_config.h"
 #include "drivers/gc0328.h"
 #include "drivers/lcd.h"
+
+#define INCBIN_STYLE INCBIN_STYLE_SNAKE
+#define INCBIN_PREFIX
+#include "incbin.h"
+
+    INCBIN(model, "model.kmodel");
 }
 
 using namespace std::literals;
@@ -45,13 +52,21 @@ private:
 
         return 0;
     }
+    static void irq_kpu(void* ctx) {
+        auto& self = *reinterpret_cast<Self*>(ctx);
+
+        self.has_kpu_finished = true;
+    }
 
 private:
     std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> lcd_gram{};
     std::array<uint16_t, CAMERA_WIDTH * CAMERA_HEIGHT> dvp_565{};
     std::array<std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>, 3> dvp_888_planar{};
 
+    kpu_model_context_t model_context;
+
     volatile bool has_dvp_finished = true;
+    volatile bool has_kpu_finished = true;
 
 public:
     Main() {
@@ -65,6 +80,7 @@ private:
         initialize_power();
         initialize_io();
         initialize_dvp();
+        initialize_model();
         initialize_irq();
     }
     void initialize_power() {
@@ -120,6 +136,9 @@ private:
 
         gc0328_init();
     }
+    void initialize_model() {
+        kpu_load_kmodel(&model_context, model_data);
+    }
     void initialize_irq() {
         plic_init();
 
@@ -147,6 +166,20 @@ private:
         dvp_config_interrupt(DVP_CFG_START_INT_ENABLE | DVP_CFG_FINISH_INT_ENABLE, 1);
         while (!has_dvp_finished)
             ;
+    }
+    void run_kpu() {
+        if (has_kpu_finished) {
+            has_kpu_finished = false;
+            kpu_run_kmodel(&model_context, dvp_888_planar[0].data(), DMAC_CHANNEL5, &Self::irq_kpu, this);
+        }
+    }
+    void wait_for_kpu() {
+        while (!has_kpu_finished)
+            ;
+    }
+    void run_kpu_blocking() {
+        run_kpu();
+        wait_for_kpu();
     }
 };
 
