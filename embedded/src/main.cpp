@@ -32,7 +32,7 @@ public:
 
 private:
     static int irq_dvp(void* ctx) {
-        auto& self = *reinterpret_cast<Main*>(ctx);
+        auto& self = *reinterpret_cast<Self*>(ctx);
 
         if (dvp_get_interrupt(DVP_STS_FRAME_FINISH)) {
             dvp_config_interrupt(DVP_CFG_START_INT_ENABLE | DVP_CFG_FINISH_INT_ENABLE, 0);
