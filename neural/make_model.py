@@ -18,7 +18,7 @@ def make_model(n_layer: int = 100):
                 strides=1,
                 padding="same",
                 use_bias=False,
-                input_shape=(None, None, 3),
+                input_shape=(320, 240, 3),
             )
             for _ in range(n_layer)
         ]

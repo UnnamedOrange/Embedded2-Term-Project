@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 
 from make_model import make_model
@@ -6,7 +5,6 @@ from make_model import make_model
 
 def make_tflite(n_layer: int = 100) -> bytes:
     model = make_model(n_layer)
-    model.predict(np.zeros([1, 320, 240, 3]))
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
 
     tflite_model = converter.convert()
