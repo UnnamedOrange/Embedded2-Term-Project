@@ -168,9 +168,12 @@ private:
             for (auto j = 0; j < CAMERA_WIDTH; j++) {
                 const auto idx = i * CAMERA_WIDTH + j;
                 uint16_t pixel = dvp_565[idx];
-                dvp_888_planar[0][idx] = ((pixel >> 11) & ((1 << 5) - 1)) << (8 - 5);
-                dvp_888_planar[1][idx] = ((pixel >> 5) & ((1 << 6) - 1)) << (8 - 6);
-                dvp_888_planar[2][idx] = ((pixel >> 0) & ((1 << 5) - 1)) << (8 - 5);
+                uint8_t r = (pixel >> 11) & ((1 << 5) - 1);
+                uint8_t g = (pixel >> 5) & ((1 << 6) - 1);
+                uint8_t b = (pixel >> 0) & ((1 << 5) - 1);
+                dvp_888_planar[0][idx] = (r << (8 - 5)) | (r >> (5 - (8 - 5)));
+                dvp_888_planar[1][idx] = (g << (8 - 6)) | (g >> (6 - (8 - 6)));
+                dvp_888_planar[2][idx] = (b << (8 - 5)) | (b >> (5 - (8 - 5)));
             }
         }
     }
