@@ -64,6 +64,8 @@ private:
     std::array<uint16_t, CAMERA_WIDTH * CAMERA_HEIGHT> dvp_565{};
     std::array<std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>, 3> dvp_888_planar{};
 
+    std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT> mask{};
+
     kpu_model_context_t model_context;
 
     volatile bool has_dvp_finished = true;
@@ -209,6 +211,27 @@ private:
     void run_kpu_blocking() {
         run_kpu();
         wait_for_kpu();
+    }
+    void calculate_mask() {
+        constexpr auto threshold = 30;
+        // Assume it is IR.
+        for (auto i = 0; i < CAMERA_HEIGHT; i++) {
+            for (auto j = 0; j < CAMERA_WIDTH; j++) {
+                const auto idx = i * CAMERA_WIDTH + j;
+                uint8_t min = 255;
+                uint8_t max = 0;
+                for (auto k = 0; k < 3; k++) {
+                    min = std::min(min, dvp_888_planar[k][idx]);
+                    max = std::max(max, dvp_888_planar[k][idx]);
+                }
+                const auto brightness = (int(max) + int(min)) / 2;
+                if (brightness >= threshold) {
+                    mask[idx] = 255;
+                } else {
+                    mask[idx] = 64 * (threshold - brightness) / threshold;
+                }
+            }
+        }
     }
 };
 
