@@ -161,6 +161,28 @@ private:
     void bitblt() {
         lcd_draw_picture(0, 0, LCD_WIDTH, LCD_HEIGHT, reinterpret_cast<uint32_t*>(lcd_gram.data()));
     }
+    void dvp_565_to_dvp_888_planar() {
+        for (auto i = 0; i < CAMERA_HEIGHT; i++) {
+            for (auto j = 0; j < CAMERA_WIDTH; j++) {
+                const auto idx = i * CAMERA_WIDTH + j;
+                uint16_t pixel = dvp_565[idx];
+                dvp_888_planar[0][idx] = ((pixel >> 11) & ((1 << 5) - 1)) << (8 - 5);
+                dvp_888_planar[1][idx] = ((pixel >> 5) & ((1 << 6) - 1)) << (8 - 6);
+                dvp_888_planar[2][idx] = ((pixel >> 0) & ((1 << 5) - 1)) << (8 - 5);
+            }
+        }
+    }
+    void dvp_888_planar_to_dvp_565() {
+        for (auto i = 0; i < CAMERA_HEIGHT; i++) {
+            for (auto j = 0; j < CAMERA_WIDTH; j++) {
+                const auto idx = i * CAMERA_WIDTH + j;
+                uint16_t r = dvp_888_planar[0][idx];
+                uint16_t g = dvp_888_planar[1][idx];
+                uint16_t b = dvp_888_planar[2][idx];
+                dvp_565[idx] = (b >> (8 - 5)) | (g >> (8 - 6) << 5) | (r >> (8 - 5) << 11);
+            }
+        }
+    }
     void capture_blocking(int camera_id) {
         if (camera_id == 0) {
             open_gc0328_0();
