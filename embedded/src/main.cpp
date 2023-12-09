@@ -13,6 +13,7 @@ extern "C"
 #include <gpiohs.h>
 #include <kpu.h>
 #include <plic.h>
+#include <pwm.h>
 #include <sysctl.h>
 
 #include "drivers/board_config.h"
@@ -114,6 +115,12 @@ private:
         fpioa_set_function(DVP_PCLK_PIN, FUNC_CMOS_PCLK);
         fpioa_set_function(DVP_SCCB_SCLK_PIN, FUNC_SCCB_SCLK);
         fpioa_set_function(DVP_SCCB_SDA_PIN, FUNC_SCCB_SDA);
+
+        // Infrared LED.
+        fpioa_set_function(LED_IR_PIN, FUNC_TIMER0_TOGGLE1);
+        pwm_init(PWM_DEVICE_0);
+        pwm_set_frequency(PWM_DEVICE_0, PWM_CHANNEL_0, 3000, 0.3);
+        pwm_set_enable(PWM_DEVICE_0, PWM_CHANNEL_0, true);
     }
     void initialize_clock() {
         sysctl_pll_set_freq(SYSCTL_PLL0, 800000000UL);
