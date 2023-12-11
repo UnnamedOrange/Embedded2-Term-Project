@@ -4,10 +4,12 @@
 #include <cstdio>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <thread>
 
 extern "C"
 {
+#include <bsp.h>
 #include <dvp.h>
 #include <fpioa.h>
 #include <gpiohs.h>
@@ -38,6 +40,11 @@ public:
     static constexpr auto CAMERA_WIDTH = 320;
     static constexpr auto CAMERA_HEIGHT = 240;
 
+    static constexpr auto IR_LED_DUTY = std::array{1.0};
+    static constexpr auto JITTER_THRESHOLD = 50ms;
+    static constexpr auto HOLD_THRESHOLD = 500ms;
+    static constexpr auto HOLD_REPEAT = 20ms;
+
 private:
     static int irq_dvp(void* ctx) {
         auto& self = *reinterpret_cast<Self*>(ctx);
@@ -66,6 +73,43 @@ private:
         return 0;
     }
 
+    static int core1_routine(void* ctx) { // 天知地知我知。
+        auto& self = *reinterpret_cast<Self*>(ctx);
+
+        using Clock = std::chrono::steady_clock;
+        auto pre_down = std::optional<Clock::time_point>{};
+        auto pre_hold = std::optional<Clock::time_point>{};
+        while (true) {
+            const auto now = Clock::now();
+            if (self.is_button_down) {
+                if (!pre_down) {
+                    pre_down = std::optional{now};
+                }
+                const auto duration = now - *pre_down;
+                if (duration >= HOLD_THRESHOLD) {
+                    if (!pre_hold || now - *pre_hold >= HOLD_REPEAT) {
+                        if (!pre_hold) {
+                            self.is_increasing = !self.is_increasing;
+                        }
+                        self.on_button_hold();
+                        pre_hold = now;
+                    }
+                }
+            } else {
+                if (!pre_down) {
+                    continue;
+                }
+                const auto duration = now - *pre_down;
+                if (JITTER_THRESHOLD <= duration && duration < HOLD_THRESHOLD) {
+                    self.on_button_click();
+                }
+                pre_down = std::nullopt;
+                pre_hold = std::nullopt;
+            }
+        }
+        return 0;
+    }
+
 private:
     std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> lcd_gram{};
     std::array<uint16_t, CAMERA_WIDTH * CAMERA_HEIGHT> dvp_565{};
@@ -78,6 +122,10 @@ private:
     volatile bool has_dvp_finished = true;
     volatile bool has_kpu_finished = true;
     volatile bool is_button_down = false;
+
+    size_t ir_led_duty_index_plus_1 = 1; // 0 for not enabled.
+    uint8_t background_threshold = 35;
+    bool is_increasing = false;
 
 public:
     Main() {
@@ -93,6 +141,7 @@ private:
         initialize_dvp();
         initialize_model();
         initialize_irq();
+        register_core1(&Self::core1_routine, this);
     }
     void initialize_power() {
         sysctl_set_power_mode(SYSCTL_POWER_BANK6, SYSCTL_POWER_V18);
@@ -129,7 +178,7 @@ private:
         // Infrared LED.
         fpioa_set_function(LED_IR_PIN, FUNC_TIMER0_TOGGLE1);
         pwm_init(PWM_DEVICE_0);
-        pwm_set_frequency(PWM_DEVICE_0, PWM_CHANNEL_0, 3000, 0.3);
+        update_ir_led();
         pwm_set_enable(PWM_DEVICE_0, PWM_CHANNEL_0, true);
 
         // Button.
@@ -175,6 +224,38 @@ private:
         gpiohs_irq_register(KEY_IO, 1, &Self::irq_button, this);
 
         sysctl_enable_irq();
+    }
+    void update_ir_led() {
+        if (ir_led_duty_index_plus_1) {
+            pwm_set_frequency(PWM_DEVICE_0, PWM_CHANNEL_0, 3000, IR_LED_DUTY[ir_led_duty_index_plus_1 - 1]);
+        } else {
+            pwm_set_frequency(PWM_DEVICE_0, PWM_CHANNEL_0, 3000, 0.0);
+        }
+    }
+    void on_button_click() {
+        if (ir_led_duty_index_plus_1 >= IR_LED_DUTY.size()) {
+            ir_led_duty_index_plus_1 = 0;
+        } else {
+            ir_led_duty_index_plus_1++;
+        }
+        update_ir_led();
+    }
+    void on_button_hold() {
+        constexpr uint16_t min = 0;
+        constexpr uint16_t max = 255;
+        if (is_increasing) {
+            if (background_threshold >= max) {
+                is_increasing = false;
+            } else {
+                background_threshold++;
+            }
+        } else {
+            if (background_threshold <= min) {
+                is_increasing = true;
+            } else {
+                background_threshold--;
+            }
+        }
     }
     void bitblt() {
         lcd_draw_picture(0, 0, LCD_WIDTH, LCD_HEIGHT, reinterpret_cast<uint32_t*>(lcd_gram.data()));
@@ -232,7 +313,7 @@ private:
         wait_for_kpu();
     }
     void calculate_mask() {
-        constexpr auto threshold = 30;
+        const auto threshold = background_threshold;
         // Assume it is IR.
         for (auto i = 0; i < CAMERA_HEIGHT; i++) {
             for (auto j = 0; j < CAMERA_WIDTH; j++) {
