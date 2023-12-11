@@ -58,6 +58,13 @@ private:
 
         self.has_kpu_finished = true;
     }
+    static int irq_button(void* ctx) {
+        auto& self = *reinterpret_cast<Self*>(ctx);
+
+        self.is_button_down = !gpiohs_get_pin(KEY_IO);
+
+        return 0;
+    }
 
 private:
     std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> lcd_gram{};
@@ -70,6 +77,7 @@ private:
 
     volatile bool has_dvp_finished = true;
     volatile bool has_kpu_finished = true;
+    volatile bool is_button_down = false;
 
 public:
     Main() {
@@ -123,6 +131,11 @@ private:
         pwm_init(PWM_DEVICE_0);
         pwm_set_frequency(PWM_DEVICE_0, PWM_CHANNEL_0, 3000, 0.3);
         pwm_set_enable(PWM_DEVICE_0, PWM_CHANNEL_0, true);
+
+        // Button.
+        fpioa_set_function(KEY_PIN, fpioa_function_t(int(FUNC_GPIOHS0) + KEY_IO));
+        gpiohs_set_drive_mode(KEY_IO, GPIO_DM_INPUT_PULL_UP);
+        gpiohs_set_pin_edge(KEY_IO, GPIO_PE_BOTH);
     }
     void initialize_clock() {
         sysctl_pll_set_freq(SYSCTL_PLL0, 800000000UL);
@@ -157,6 +170,9 @@ private:
         plic_set_priority(IRQN_DVP_INTERRUPT, 1);
         plic_irq_register(IRQN_DVP_INTERRUPT, &Self::irq_dvp, this);
         plic_irq_enable(IRQN_DVP_INTERRUPT);
+
+        // Button.
+        gpiohs_irq_register(KEY_IO, 1, &Self::irq_button, this);
 
         sysctl_enable_irq();
     }
