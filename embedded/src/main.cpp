@@ -132,6 +132,23 @@ private:
 public:
     Main() {
         initialize();
+
+        while (true) {
+            capture_blocking(0);
+            dvp_565_to_dvp_888_planar();
+            calculate_mask();
+
+            capture_blocking(1);
+            dvp_565_to_dvp_888_planar();
+            if (ir_led_duty_index_plus_1) {
+                calc_blurred();
+                apply_blurred_to_dvp_888();
+            }
+            dvp_888_planar_to_dvp_565();
+
+            lcd_gram = dvp_565;
+            bitblt();
+        }
     }
 
     // Private extracted methods.
