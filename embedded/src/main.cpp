@@ -40,7 +40,7 @@ public:
     static constexpr auto CAMERA_WIDTH = 320;
     static constexpr auto CAMERA_HEIGHT = 240;
 
-    static constexpr auto IR_LED_DUTY = std::array{1.0};
+    static constexpr auto IR_LED_DUTY = std::array{1.0, 0.7, 0.5, 0.3};
     static constexpr auto JITTER_THRESHOLD = 50ms;
     static constexpr auto HOLD_THRESHOLD = 500ms;
     static constexpr auto HOLD_REPEAT = 20ms;
@@ -195,7 +195,7 @@ private:
         dvp_init(8);
         dvp_set_xclk_rate(64000000);
         dvp_enable_burst();
-        dvp_set_output_enable(DVP_OUTPUT_AI, 1);
+        dvp_set_output_enable(DVP_OUTPUT_AI, 0);
         dvp_set_output_enable(DVP_OUTPUT_DISPLAY, 1);
         dvp_set_image_format(DVP_CFG_RGB_FORMAT);
         dvp_set_image_size(CAMERA_WIDTH, CAMERA_HEIGHT);
@@ -264,10 +264,10 @@ private:
         for (auto i = 0; i < CAMERA_HEIGHT; i++) {
             for (auto j = 0; j < CAMERA_WIDTH; j++) {
                 const auto idx = i * CAMERA_WIDTH + j;
-                uint16_t pixel = dvp_565[idx];
-                uint8_t r = (pixel >> 11) & ((1 << 5) - 1);
-                uint8_t g = (pixel >> 5) & ((1 << 6) - 1);
-                uint8_t b = (pixel >> 0) & ((1 << 5) - 1);
+                const uint16_t pixel = dvp_565[idx];
+                const uint8_t r = (pixel >> 11) & ((1 << 5) - 1);
+                const uint8_t g = (pixel >> 5) & ((1 << 6) - 1);
+                const uint8_t b = (pixel >> 0) & ((1 << 5) - 1);
                 dvp_888_planar[0][idx] = (r << (8 - 5)) | (r >> (5 - (8 - 5)));
                 dvp_888_planar[1][idx] = (g << (8 - 6)) | (g >> (6 - (8 - 6)));
                 dvp_888_planar[2][idx] = (b << (8 - 5)) | (b >> (5 - (8 - 5)));
@@ -278,9 +278,9 @@ private:
         for (auto i = 0; i < CAMERA_HEIGHT; i++) {
             for (auto j = 0; j < CAMERA_WIDTH; j++) {
                 const auto idx = i * CAMERA_WIDTH + j;
-                uint16_t r = dvp_888_planar[0][idx];
-                uint16_t g = dvp_888_planar[1][idx];
-                uint16_t b = dvp_888_planar[2][idx];
+                const uint16_t r = dvp_888_planar[0][idx];
+                const uint16_t g = dvp_888_planar[1][idx];
+                const uint16_t b = dvp_888_planar[2][idx];
                 dvp_565[idx] = (b >> (8 - 5)) | (g >> (8 - 6) << 5) | (r >> (8 - 5) << 11);
             }
         }
