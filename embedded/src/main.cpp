@@ -1,3 +1,14 @@
+/**
+ * @file main.cpp
+ * @author UnnamedOrange
+ * @brief Entry.
+ * @version 0.1.0
+ * @date 2023-12-13
+ *
+ * @copyright Copyright (c) UnnamedOrange. Licensed under the MIT License.
+ * See the LICENSE file in the repository root for full license text.
+ */
+
 #include <array>
 #include <chrono>
 #include <cstdint>

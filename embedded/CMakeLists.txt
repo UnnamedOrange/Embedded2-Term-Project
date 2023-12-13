@@ -1,3 +1,6 @@
+# Copyright (c) UnnamedOrange. Licensed under the MIT License.
+# See the LICENSE file in the repository root for full license text.
+
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 
 # Set this will supress some warnings.

@@ -1,3 +1,6 @@
+# Copyright (c) UnnamedOrange. Licensed under the MIT License.
+# See the LICENSE file in the repository root for full license text.
+
 import tensorflow as tf
 
 from make_model import make_model
