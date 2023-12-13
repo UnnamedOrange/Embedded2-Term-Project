@@ -116,6 +116,8 @@ private:
     std::array<std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>, 3> dvp_888_planar{};
 
     std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT> mask{};
+    std::array<uint32_t, CAMERA_WIDTH * CAMERA_HEIGHT> sum{};
+    std::array<std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>, 3> blurred{};
 
     kpu_model_context_t model_context;
 
@@ -329,6 +331,48 @@ private:
                     mask[idx] = 255;
                 } else {
                     mask[idx] = 64 * (threshold - brightness) / threshold;
+                }
+            }
+        }
+    }
+    void calc_blurred() {
+        for (auto i = 0; i < 3; i++) {
+            calc_blurred_soft(dvp_888_planar[i], blurred[i], 15);
+        }
+    }
+    void calc_blurred_soft(const std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>& src, //
+                           std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>& des,       //
+                           int radius) {
+        for (int y = 0; y < CAMERA_HEIGHT; ++y) {
+            uint32_t sumR = 0;
+            for (int x = 0; x < CAMERA_WIDTH; ++x) {
+                sumR += src[y * CAMERA_WIDTH + x];
+                if (x >= radius) {
+                    sumR -= src[y * CAMERA_WIDTH + (x - radius)];
+                }
+                sum[y * CAMERA_WIDTH + x] = sumR;
+            }
+        }
+        for (int x = 0; x < CAMERA_WIDTH; ++x) {
+            uint32_t sumR = 0;
+            for (int y = 0; y < CAMERA_HEIGHT; ++y) {
+                sumR += sum[y * CAMERA_WIDTH + x];
+                if (y >= radius) {
+                    sumR -= sum[(y - radius) * CAMERA_WIDTH + x];
+                }
+                des[y * CAMERA_WIDTH + x] = static_cast<uint8_t>(sumR / (radius * radius));
+            }
+        }
+    }
+    void apply_blurred_to_dvp_888() {
+        for (auto i = 0; i < CAMERA_HEIGHT; i++) {
+            for (auto j = 0; j < CAMERA_WIDTH; j++) {
+                const auto idx = i * CAMERA_WIDTH + j;
+                const auto m = mask[idx];
+                for (auto k = 0; k < 3; k++) {
+                    auto& target = dvp_888_planar[k][idx];
+                    const auto& b = blurred[k][idx];
+                    target = static_cast<uint8_t>((uint16_t(target) * m + uint16_t(b) * (255 - m)) / 255);
                 }
             }
         }
