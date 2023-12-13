@@ -142,6 +142,7 @@ public:
             dvp_565_to_dvp_888_planar();
             if (ir_led_duty_index_plus_1) {
                 calc_blurred();
+                calc_blurred_soft(mask, mask, 7);
                 apply_blurred_to_dvp_888();
             }
             dvp_888_planar_to_dvp_565();
@@ -354,7 +355,7 @@ private:
     }
     void calc_blurred() {
         for (auto i = 0; i < 3; i++) {
-            calc_blurred_soft(dvp_888_planar[i], blurred[i], 15);
+            calc_blurred_soft(dvp_888_planar[i], blurred[i], 35);
         }
     }
     void calc_blurred_soft(const std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>& src, //
@@ -362,20 +363,30 @@ private:
                            int radius) {
         for (int y = 0; y < CAMERA_HEIGHT; ++y) {
             uint32_t sumR = 0;
+            for (int x = 0; x < radius; x++) {
+                sumR += src[y * CAMERA_WIDTH + x];
+            }
             for (int x = 0; x < CAMERA_WIDTH; ++x) {
                 sumR += src[y * CAMERA_WIDTH + x];
                 if (x >= radius) {
                     sumR -= src[y * CAMERA_WIDTH + (x - radius)];
+                } else {
+                    sumR -= src[y * CAMERA_WIDTH + (radius - x - 1)];
                 }
                 sum[y * CAMERA_WIDTH + x] = sumR;
             }
         }
         for (int x = 0; x < CAMERA_WIDTH; ++x) {
             uint32_t sumR = 0;
+            for (int y = 0; y < radius; y++) {
+                sumR += sum[y * CAMERA_WIDTH + x];
+            }
             for (int y = 0; y < CAMERA_HEIGHT; ++y) {
                 sumR += sum[y * CAMERA_WIDTH + x];
                 if (y >= radius) {
                     sumR -= sum[(y - radius) * CAMERA_WIDTH + x];
+                } else {
+                    sumR -= sum[(radius - y - 1) * CAMERA_WIDTH + x];
                 }
                 des[y * CAMERA_WIDTH + x] = static_cast<uint8_t>(sumR / (radius * radius));
             }
