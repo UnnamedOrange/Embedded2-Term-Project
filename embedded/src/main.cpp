@@ -356,11 +356,7 @@ private:
                     max = std::max(max, dvp_888_planar[k][idx]);
                 }
                 const auto brightness = (int(max) + int(min)) / 2;
-                if (brightness >= threshold) {
-                    mask[idx] = 255;
-                } else {
-                    mask[idx] = 64 * (threshold - brightness) / threshold;
-                }
+                mask[idx] = brightness >= threshold ? 255 : 0;
             }
         }
     }
