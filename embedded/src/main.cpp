@@ -372,34 +372,69 @@ private:
     void calc_blurred_soft(const std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>& src, //
                            std::array<uint8_t, CAMERA_WIDTH * CAMERA_HEIGHT>& des,       //
                            int radius) {
-        for (int y = 0; y < CAMERA_HEIGHT; ++y) {
-            uint32_t sumR = 0;
-            for (int x = 0; x < radius; x++) {
-                sumR += src[y * CAMERA_WIDTH + x];
+        for (int y = 0; y < CAMERA_HEIGHT; y++) {
+            uint32_t sum_r = src[y * CAMERA_WIDTH];
+            uint32_t stack_in = src[y * CAMERA_WIDTH];
+            uint32_t stack_out = 0;
+            for (int x = 1; x <= radius; x++) {
+                stack_in += src[y * CAMERA_WIDTH + x];
+                stack_out += src[y * CAMERA_WIDTH + x];
+                sum_r += stack_in + stack_out;
             }
-            for (int x = 0; x < CAMERA_WIDTH; ++x) {
-                sumR += src[y * CAMERA_WIDTH + x];
-                if (x >= radius) {
-                    sumR -= src[y * CAMERA_WIDTH + (x - radius)];
+            sum_r -= stack_in;
+            stack_in -= src[y * CAMERA_WIDTH + radius];
+
+            for (int x = 0; x < CAMERA_WIDTH; x++) {
+                if (x + radius < CAMERA_WIDTH) {
+                    stack_in += src[y * CAMERA_WIDTH + (x + radius)];
                 } else {
-                    sumR -= src[y * CAMERA_WIDTH + (radius - x - 1)];
+                    stack_in += src[y * CAMERA_WIDTH + (CAMERA_WIDTH - 1 - (x + radius - CAMERA_WIDTH) - 1)];
                 }
-                sum[y * CAMERA_WIDTH + x] = sumR;
+                sum_r += stack_in;
+                stack_in -= src[y * CAMERA_WIDTH + x];
+
+                sum[y * CAMERA_WIDTH + x] = sum_r;
+
+                stack_out += src[y * CAMERA_WIDTH + x];
+                sum_r -= stack_out;
+                if (x >= radius) {
+                    stack_out -= src[y * CAMERA_WIDTH + (x - radius)];
+                } else {
+                    stack_out -= src[y * CAMERA_WIDTH + (radius - x)];
+                }
             }
         }
-        for (int x = 0; x < CAMERA_WIDTH; ++x) {
-            uint32_t sumR = 0;
-            for (int y = 0; y < radius; y++) {
-                sumR += sum[y * CAMERA_WIDTH + x];
+        for (int x = 0; x < CAMERA_WIDTH; x++) {
+            uint32_t sum_r = sum[x];
+            uint32_t stack_in = sum[x];
+            uint32_t stack_out = 0;
+            for (int y = 1; y <= radius; y++) {
+                stack_in += sum[y * CAMERA_WIDTH + x];
+                stack_out += sum[y * CAMERA_WIDTH + x];
+                sum_r += stack_in + stack_out;
             }
-            for (int y = 0; y < CAMERA_HEIGHT; ++y) {
-                sumR += sum[y * CAMERA_WIDTH + x];
-                if (y >= radius) {
-                    sumR -= sum[(y - radius) * CAMERA_WIDTH + x];
+            sum_r -= stack_in;
+            stack_in -= sum[radius * CAMERA_WIDTH + x];
+
+            for (int y = 0; y < CAMERA_HEIGHT; y++) {
+                if (y + radius < CAMERA_HEIGHT) {
+                    stack_in += sum[(y + radius) * CAMERA_WIDTH + x];
                 } else {
-                    sumR -= sum[(radius - y - 1) * CAMERA_WIDTH + x];
+                    stack_in += sum[(CAMERA_HEIGHT - 1 - (y + radius - CAMERA_HEIGHT) - 1) * CAMERA_WIDTH + x];
                 }
-                des[y * CAMERA_WIDTH + x] = static_cast<uint8_t>(sumR / (radius * radius));
+                sum_r += stack_in;
+                stack_in -= sum[y * CAMERA_WIDTH + x];
+
+                des[y * CAMERA_WIDTH + x] =
+                    static_cast<uint8_t>(sum_r / ((radius + 1) * (radius + 1) * (radius + 1) * (radius + 1)));
+
+                stack_out += sum[y * CAMERA_WIDTH + x];
+                sum_r -= stack_out;
+                if (y >= radius) {
+                    stack_out -= sum[(y - radius) * CAMERA_WIDTH + x];
+                } else {
+                    stack_out -= sum[(radius - y) * CAMERA_WIDTH + x];
+                }
             }
         }
     }
